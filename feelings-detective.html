@@ -1,0 +1,1233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Feelings Detective</title>
+<style>
+  :root{
+    --bg:#FFF8EE;
+    --panel:#FFFFFF;
+    --ink:#3A3A3A;
+    --soft:#7A7A7A;
+    --blue:#4F8FE8;
+    --blue-dark:#3568B0;
+    --green:#5FB87A;
+    --green-dark:#3E9259;
+    --yellow:#F5C84C;
+    --red:#E8665A;
+    --purple:#9B7FE0;
+    --radius:22px;
+    --shadow:0 6px 18px rgba(0,0,0,0.08);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  html{
+    touch-action:manipulation; /* avoid double-tap zoom delay on iPad/mobile */
+  }
+  body{
+    font-family:'Comic Sans MS','Segoe UI Rounded','Trebuchet MS',sans-serif;
+    background:var(--bg);
+    color:var(--ink);
+    min-height:100vh;
+    min-height:100dvh; /* avoids iOS Safari address-bar resize jump */
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    -webkit-tap-highlight-color:transparent;
+    user-select:none;
+    overscroll-behavior-y:none; /* avoid iPad rubber-band scroll yanking the page */
+  }
+  .screen{
+    width:100%;
+    max-width:720px;
+    min-height:100vh;
+    min-height:100dvh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding:18px 16px 28px;
+  }
+  .hidden{display:none !important;}
+
+  /* ---------- Top bar ---------- */
+  .topbar{
+    width:100%;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:10px;
+    gap:8px;
+  }
+  .topbar-left{
+    display:flex;
+    gap:8px;
+  }
+  .iconbtn{
+    background:var(--panel);
+    border:none;
+    border-radius:16px;
+    width:48px;
+    height:48px;
+    font-size:22px;
+    box-shadow:var(--shadow);
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-shrink:0;
+    touch-action:manipulation;
+  }
+  .iconbtn:active{transform:scale(0.93);}
+  .iconbtn[disabled]{
+    opacity:0.35;
+    cursor:default;
+  }
+  .iconbtn[disabled]:active{transform:none;}
+
+  /* ---------- Headings ---------- */
+  h1{
+    font-size:1.8rem;
+    margin:4px 0 2px;
+    text-align:center;
+  }
+  .subtitle{
+    color:var(--soft);
+    text-align:center;
+    font-size:1.05rem;
+    margin-bottom:18px;
+  }
+  .big-emoji{
+    font-size:4.2rem;
+    margin-bottom:6px;
+    display:inline-block;
+    animation: floatBob 3.2s ease-in-out infinite;
+  }
+  @keyframes floatBob{
+    0%,100%{ transform: translateY(0) rotate(0deg); }
+    50%{ transform: translateY(-10px) rotate(-4deg); }
+  }
+
+  /* Soft drifting background shapes for a livelier, non-distracting feel */
+  .bg-float{
+    position:fixed;
+    font-size:2.4rem;
+    opacity:0.16;
+    pointer-events:none;
+    z-index:0;
+    animation: driftUpDown 6s ease-in-out infinite;
+  }
+  @keyframes driftUpDown{
+    0%,100%{ transform: translateY(0) rotate(0deg); }
+    50%{ transform: translateY(-18px) rotate(8deg); }
+  }
+
+  /* ---------- Photo / offline-icon toggle ---------- */
+  .photo-toggle{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    background:var(--panel);
+    border:2px solid #E2D9C4;
+    border-radius:20px;
+    padding:10px 16px;
+    margin-bottom:6px;
+    cursor:pointer;
+    touch-action:manipulation;
+    box-shadow:0 2px 6px rgba(0,0,0,0.06);
+    z-index:1;
+  }
+  .photo-toggle-icon{ font-size:1.3rem; }
+  .photo-toggle-label{
+    font-weight:bold;
+    font-size:0.98rem;
+    color:#4A4A4A;
+    flex:1;
+    text-align:left;
+  }
+  .photo-toggle-switch{
+    width:46px;
+    height:26px;
+    border-radius:14px;
+    background:#C9C2AE;
+    position:relative;
+    flex-shrink:0;
+    transition: background 0.2s ease;
+  }
+  .photo-toggle-switch.on{ background:var(--green); }
+  .photo-toggle-knob{
+    position:absolute;
+    top:3px;
+    left:3px;
+    width:20px;
+    height:20px;
+    border-radius:50%;
+    background:#fff;
+    box-shadow:0 1px 3px rgba(0,0,0,0.3);
+    transition: left 0.2s ease;
+  }
+  .photo-toggle-switch.on .photo-toggle-knob{ left:23px; }
+  .photo-toggle-hint{
+    font-size:0.82rem;
+    color:var(--soft);
+    text-align:center;
+    margin-bottom:14px;
+    max-width:320px;
+    z-index:1;
+  }
+
+  /* ---------- Home screen story cards ---------- */
+  .story-list{
+    width:100%;
+    display:flex;
+    flex-direction:column;
+    gap:16px;
+    margin-top:8px;
+    position:relative;
+    z-index:1;
+  }
+  .story-card{
+    background:var(--panel);
+    border:none;
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    padding:18px 18px;
+    display:flex;
+    align-items:center;
+    gap:16px;
+    cursor:pointer;
+    text-align:left;
+    width:100%;
+    opacity:0;
+    transform:translateY(16px);
+    animation: cardRiseIn 0.55s ease forwards;
+    touch-action:manipulation;
+  }
+  @keyframes cardRiseIn{
+    to{ opacity:1; transform:translateY(0); }
+  }
+  .story-card:active{transform:scale(0.97);}
+  .story-card .emoji{
+    font-size:3rem;
+    flex-shrink:0;
+    display:inline-block;
+    transition: transform 0.2s ease;
+  }
+  .story-card:hover .emoji{
+    transform: scale(1.15) rotate(-6deg);
+  }
+  .story-card .title{font-size:1.25rem;font-weight:bold;}
+  .story-card .desc{color:var(--soft);font-size:0.95rem;margin-top:2px;}
+
+  /* ---------- Story screen ---------- */
+  .progress-row{
+    display:flex;
+    gap:8px;
+    margin:6px 0 14px;
+  }
+  .dot{
+    width:14px;height:14px;border-radius:50%;
+    background:#E2DCCB;
+    transition:background .25s;
+  }
+  .dot.done{background:var(--green);}
+  .dot.current{background:var(--yellow);}
+
+  .narration-card{
+    background:var(--panel);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    padding:16px 20px;
+    width:100%;
+    margin-bottom:14px;
+    display:flex;
+    align-items:flex-start;
+    gap:12px;
+  }
+  .narration-card .listen-btn{
+    background:var(--blue);
+    border:none;
+    color:white;
+    border-radius:50%;
+    width:48px;height:48px;
+    font-size:22px;
+    flex-shrink:0;
+    cursor:pointer;
+    box-shadow:0 3px 8px rgba(79,143,232,0.4);
+    touch-action:manipulation;
+  }
+  .narration-card .listen-btn:active{transform:scale(0.92);}
+  .narration-text{
+    font-size:1.15rem;
+    line-height:1.5;
+  }
+  .narration-text b{color:var(--blue-dark);}
+
+  .question-card{
+    background:#FFF1D6;
+    border:3px solid var(--yellow);
+    border-radius:var(--radius);
+    padding:14px 18px;
+    width:100%;
+    margin-bottom:16px;
+    font-size:1.2rem;
+    font-weight:bold;
+    text-align:center;
+  }
+
+  /* ---------- Scene (hotspot area) ---------- */
+  .scene-wrap{
+    position:relative;
+    width:100%;
+    aspect-ratio: 11 / 6;
+    background:var(--panel);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    overflow:hidden;
+    margin-bottom:14px;
+  }
+  .scene-wrap svg{
+    width:100%;
+    height:100%;
+    display:block;
+  }
+  .hotspot{
+    cursor:pointer;
+    transition: transform .15s;
+    touch-action:manipulation;
+  }
+  .hotspot:hover{ filter:brightness(1.05); }
+  .hotspot.correct-flash{
+    animation: pulseGreen 0.6s ease;
+  }
+  .hotspot.wrong-flash{
+    animation: shakeRed 0.5s ease;
+  }
+  @keyframes pulseGreen{
+    0%{filter:none;}
+    40%{filter:drop-shadow(0 0 14px rgba(95,184,122,0.9));}
+    100%{filter:none;}
+  }
+  @keyframes shakeRed{
+    0%,100%{transform:translateX(0);}
+    25%{transform:translateX(-6px);}
+    75%{transform:translateX(6px);}
+  }
+
+  .feedback-banner{
+    width:100%;
+    text-align:center;
+    font-size:1.3rem;
+    font-weight:bold;
+    border-radius:18px;
+    padding:14px;
+    margin-bottom:12px;
+  }
+  .feedback-banner.correct{
+    background:#E3F6E8;
+    color:var(--green-dark);
+    border:3px solid var(--green);
+  }
+  .feedback-banner.try{
+    background:#FBE9E7;
+    color:#B5453B;
+    border:3px solid var(--red);
+  }
+
+  /* ---------- Celebration / complete screen ---------- */
+  .confetti-emoji{
+    font-size:5rem;
+    margin-bottom:6px;
+    animation: bounceIn 0.7s ease;
+  }
+  @keyframes bounceIn{
+    0%{ transform:scale(0) rotate(-10deg); opacity:0; }
+    60%{ transform:scale(1.25) rotate(8deg); opacity:1; }
+    80%{ transform:scale(0.92) rotate(-4deg); }
+    100%{ transform:scale(1) rotate(0deg); }
+  }
+  .star-row{
+    font-size:2.6rem;
+    margin:10px 0 18px;
+    letter-spacing:6px;
+  }
+  .star-row span{
+    display:inline-block;
+    opacity:0;
+    transform:scale(0);
+    animation: starPop 0.5s ease forwards;
+  }
+  @keyframes starPop{
+    0%{ opacity:0; transform:scale(0) rotate(-30deg); }
+    60%{ opacity:1; transform:scale(1.3) rotate(10deg); }
+    100%{ opacity:1; transform:scale(1) rotate(0deg); }
+  }
+  .confetti-piece{
+    position:fixed;
+    top:-40px;
+    font-size:1.8rem;
+    pointer-events:none;
+    z-index:60;
+    animation-name: confettiFall;
+    animation-timing-function: ease-in;
+    animation-fill-mode: forwards;
+  }
+  @keyframes confettiFall{
+    0%{ transform: translateY(0) rotate(0deg); opacity:1; }
+    100%{ transform: translateY(110vh) rotate(360deg); opacity:0.9; }
+  }
+  .summary-card{
+    background:var(--panel);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    padding:20px;
+    width:100%;
+    text-align:center;
+    font-size:1.15rem;
+    margin-bottom:20px;
+    animation: fadeUp 0.6s ease 0.3s both;
+  }
+  @keyframes fadeUp{
+    0%{ opacity:0; transform:translateY(14px); }
+    100%{ opacity:1; transform:translateY(0); }
+  }
+  .action-btn{
+    background:var(--blue);
+    color:white;
+    border:none;
+    border-radius:18px;
+    font-size:1.15rem;
+    font-weight:bold;
+    padding:14px 26px;
+    margin:6px;
+    box-shadow:0 4px 10px rgba(79,143,232,0.4);
+    cursor:pointer;
+    touch-action:manipulation;
+  }
+  .action-btn.secondary{
+    background:var(--purple);
+    box-shadow:0 4px 10px rgba(155,127,224,0.4);
+  }
+  .action-btn:active{transform:scale(0.96);}
+
+  /* ---------- Sparkle reward pop ---------- */
+  .sparkle-pop{
+    position:fixed;
+    top:50%;
+    left:50%;
+    transform:translate(-50%,-50%);
+    font-size:5rem;
+    pointer-events:none;
+    z-index:50;
+    animation: popFade 0.9s ease forwards;
+  }
+  @keyframes popFade{
+    0%{opacity:0; transform:translate(-50%,-50%) scale(0.3);}
+    25%{opacity:1; transform:translate(-50%,-50%) scale(1.15);}
+    70%{opacity:1; transform:translate(-50%,-50%) scale(1);}
+    100%{opacity:0; transform:translate(-50%,-50%) scale(0.9);}
+  }
+
+  /* ---------- Responsive tweaks: small phones ---------- */
+  @media (max-width: 380px){
+    .screen{ padding:14px 10px 20px; }
+    h1{ font-size:1.5rem; }
+    .subtitle{ font-size:0.95rem; }
+    .big-emoji{ font-size:3.4rem; }
+    .narration-text{ font-size:1.05rem; }
+    .question-card{ font-size:1.05rem; padding:12px 14px; }
+    .story-card .title{ font-size:1.1rem; }
+    .story-card .emoji{ font-size:2.5rem; }
+    .iconbtn{ width:44px; height:44px; font-size:20px; }
+  }
+
+  /* ---------- Responsive tweaks: short / landscape screens (e.g. iPad landscape, phone landscape) ---------- */
+  @media (max-height: 480px){
+    .screen{ padding:10px 16px 14px; }
+    .big-emoji{ font-size:2.6rem; margin-bottom:0; }
+    h1{ font-size:1.4rem; margin:2px 0; }
+    .subtitle{ margin-bottom:10px; }
+    .scene-wrap{ aspect-ratio: 16 / 7; }
+    .narration-card{ padding:10px 14px; margin-bottom:8px; }
+    .question-card{ padding:8px 14px; margin-bottom:8px; }
+  }
+  /* Prevent accidental pull-to-refresh / overscroll bounce on iPad Safari */
+  body{ overflow-x:hidden; }
+</style>
+</head>
+<body>
+
+<!-- ============ HOME SCREEN ============ -->
+<div class="screen" id="screen-home">
+  <div class="bg-float" style="top:8%; left:6%; animation-delay:0s;">📚</div>
+  <div class="bg-float" style="top:14%; left:80%; animation-delay:1.5s;">✏️</div>
+  <div class="bg-float" style="top:70%; left:10%; animation-delay:0.8s;">🌟</div>
+  <div class="bg-float" style="top:78%; left:84%; animation-delay:2.2s;">🔎</div>
+
+  <div class="big-emoji">🔍😊</div>
+  <h1>Feelings Detective</h1>
+  <div class="subtitle">Tap the face that matches the feeling in the story!</div>
+
+  <button class="photo-toggle" id="photo-toggle" type="button">
+    <span class="photo-toggle-icon" id="photo-toggle-icon">🎨</span>
+    <span class="photo-toggle-label" id="photo-toggle-label">Illustrated faces</span>
+    <span class="photo-toggle-switch" id="photo-toggle-switch"><span class="photo-toggle-knob"></span></span>
+  </button>
+  <div class="photo-toggle-hint" id="photo-toggle-hint">Using illustrated faces — works offline, no internet needed.</div>
+
+  <div class="story-list" id="story-list"></div>
+</div>
+
+<!-- ============ STORY/QUESTION SCREEN ============ -->
+<div class="screen hidden" id="screen-story">
+  <div class="topbar">
+    <div class="topbar-left">
+      <button class="iconbtn" id="btn-home" aria-label="Home">🏠</button>
+    </div>
+    <div class="progress-row" id="progress-row"></div>
+    <button class="iconbtn" id="btn-replay" aria-label="Replay narration">🔊</button>
+  </div>
+
+  <div class="narration-card">
+    <button class="listen-btn" id="btn-listen" aria-label="Listen">🔊</button>
+    <div class="narration-text" id="narration-text"></div>
+  </div>
+
+  <div class="question-card" id="question-card"></div>
+
+  <div class="feedback-banner hidden" id="feedback-banner"></div>
+
+  <div class="scene-wrap" id="scene-wrap"></div>
+</div>
+
+<!-- ============ STORY COMPLETE SCREEN ============ -->
+<div class="screen hidden" id="screen-complete">
+  <div class="confetti-emoji">🎉</div>
+  <h1 id="complete-title">Great Job!</h1>
+  <div class="star-row" id="star-row"></div>
+  <div class="summary-card" id="summary-card"></div>
+  <div>
+    <button class="action-btn" id="btn-play-again">🔁 Play Again</button>
+    <button class="action-btn secondary" id="btn-go-home">🏠 More Stories</button>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   STORY DETECTIVE — story data
+   Each story = { id, title, emoji, desc, intro, questions:[...] }
+   Each question = {
+     text: narration sentence read aloud + shown,
+     prompt: short question shown in the question card,
+     scene: raw SVG string (the illustration),
+     hotspots: [ {id, shapeSelector (data-hot id), correct:boolean, label} ]
+   }
+   Hotspots are plain SVG groups with class="hotspot" and
+   data-hot="X" data-correct="true/false". Click handling is
+   done generically in app.js via event delegation.
+   ============================================================ */
+
+/* ------------------------------------------------------------
+   PHOTO BANK — real, royalty-free photos (free-to-use, no
+   attribution required), hotlinked from Pexels' CDN. Reusing
+   the same photo for the same feeling across every story keeps
+   the "flashcard" consistent, which helps generalization.
+   These photos need internet access to load — when there's no
+   connection (or the toggle is off), the game automatically
+   falls back to the offline icon faces below.
+   ------------------------------------------------------------ */
+const PHOTOS = {
+  happy:     5383156,
+  sad:       9666915,
+  angry:     7114746,
+  calm:      30739673,
+  surprised: 1724229
+};
+function photoUrl(key){
+  const id = PHOTOS[key];
+  return `https://images.pexels.com/photos/${id}/pexels-photo-${id}.jpeg?auto=compress&cs=tinysrgb&w=300&h=300&fit=crop`;
+}
+const WORD = {
+  happy:"Happy", sad:"Sad", angry:"Angry", calm:"Calm", surprised:"Surprised"
+};
+/* Offline fallback — hand-drawn illustrated faces, pure SVG shapes,
+   no internet or external images needed at all. */
+const FACE_COLOR = {
+  happy:"#F5C84C", sad:"#4F8FE8", angry:"#E8665A", calm:"#5FB87A", surprised:"#9B7FE0"
+};
+const SKIN = "#F4C99B";
+const SKIN_DARK = "#D9A86F";
+const FEATURE = "#3A2A1E";
+
+/* Returns SVG markup for an illustrated face, centered at (0,0),
+   sized for radius ~66. Caller wraps it in a <g transform="translate(cx,cy)">. */
+function illustratedFace(emotion){
+  const head = `<circle cx="0" cy="0" r="58" fill="${SKIN}" stroke="${SKIN_DARK}" stroke-width="3"/>`;
+  let ears = `
+    <circle cx="-57" cy="2" r="11" fill="${SKIN}" stroke="${SKIN_DARK}" stroke-width="3"/>
+    <circle cx="57" cy="2" r="11" fill="${SKIN}" stroke="${SKIN_DARK}" stroke-width="3"/>
+  `;
+  let face = '';
+
+  if(emotion === 'happy'){
+    face = `
+      <circle cx="-20" cy="-8" r="6" fill="${FEATURE}"/>
+      <circle cx="20" cy="-8" r="6" fill="${FEATURE}"/>
+      <path d="M -8 -28 Q -20 -32 -30 -24" fill="none" stroke="${FEATURE}" stroke-width="4" stroke-linecap="round"/>
+      <path d="M 8 -28 Q 20 -32 30 -24" fill="none" stroke="${FEATURE}" stroke-width="4" stroke-linecap="round"/>
+      <path d="M -26 14 Q 0 38 26 14" fill="none" stroke="${FEATURE}" stroke-width="6" stroke-linecap="round"/>
+      <ellipse cx="-34" cy="6" rx="8" ry="6" fill="#F2A89B" opacity="0.7"/>
+      <ellipse cx="34" cy="6" rx="8" ry="6" fill="#F2A89B" opacity="0.7"/>
+    `;
+  } else if(emotion === 'sad'){
+    face = `
+      <circle cx="-20" cy="-4" r="6" fill="${FEATURE}"/>
+      <circle cx="20" cy="-4" r="6" fill="${FEATURE}"/>
+      <path d="M -30 -20 Q -18 -14 -10 -18" fill="none" stroke="${FEATURE}" stroke-width="4" stroke-linecap="round"/>
+      <path d="M 30 -20 Q 18 -14 10 -18" fill="none" stroke="${FEATURE}" stroke-width="4" stroke-linecap="round"/>
+      <path d="M -24 26 Q 0 8 24 26" fill="none" stroke="${FEATURE}" stroke-width="6" stroke-linecap="round"/>
+      <path d="M -20 6 Q -23 16 -19 24 Q -16 27 -13 22 Q -15 14 -20 6 Z" fill="#6FB8E8"/>
+    `;
+  } else if(emotion === 'angry'){
+    face = `
+      <circle cx="-20" cy="-2" r="5.5" fill="${FEATURE}"/>
+      <circle cx="20" cy="-2" r="5.5" fill="${FEATURE}"/>
+      <path d="M -32 -18 L -10 -8" stroke="${FEATURE}" stroke-width="5" stroke-linecap="round"/>
+      <path d="M 32 -18 L 10 -8" stroke="${FEATURE}" stroke-width="5" stroke-linecap="round"/>
+      <path d="M -24 24 Q 0 12 24 24" fill="none" stroke="${FEATURE}" stroke-width="6" stroke-linecap="round"/>
+      <ellipse cx="-34" cy="10" rx="7" ry="5" fill="#E8665A" opacity="0.55"/>
+      <ellipse cx="34" cy="10" rx="7" ry="5" fill="#E8665A" opacity="0.55"/>
+    `;
+  } else if(emotion === 'calm'){
+    face = `
+      <path d="M -28 -8 Q -20 -2 -12 -8" fill="none" stroke="${FEATURE}" stroke-width="5" stroke-linecap="round"/>
+      <path d="M 28 -8 Q 20 -2 12 -8" fill="none" stroke="${FEATURE}" stroke-width="5" stroke-linecap="round"/>
+      <path d="M -10 -24 Q 0 -28 10 -24" fill="none" stroke="${FEATURE}" stroke-width="3.5" stroke-linecap="round" opacity="0.7"/>
+      <path d="M -16 18 Q 0 28 16 18" fill="none" stroke="${FEATURE}" stroke-width="5" stroke-linecap="round"/>
+      <ellipse cx="-32" cy="6" rx="7" ry="5" fill="#9BD6AE" opacity="0.6"/>
+      <ellipse cx="32" cy="6" rx="7" ry="5" fill="#9BD6AE" opacity="0.6"/>
+    `;
+  } else if(emotion === 'surprised'){
+    face = `
+      <circle cx="-20" cy="-6" r="13" fill="#FFFFFF" stroke="${FEATURE}" stroke-width="3"/>
+      <circle cx="20" cy="-6" r="13" fill="#FFFFFF" stroke="${FEATURE}" stroke-width="3"/>
+      <circle cx="-20" cy="-6" r="6" fill="${FEATURE}"/>
+      <circle cx="20" cy="-6" r="6" fill="${FEATURE}"/>
+      <path d="M -28 -28 Q -20 -34 -10 -28" fill="none" stroke="${FEATURE}" stroke-width="4" stroke-linecap="round"/>
+      <path d="M 28 -28 Q 20 -34 10 -28" fill="none" stroke="${FEATURE}" stroke-width="4" stroke-linecap="round"/>
+      <ellipse cx="0" cy="26" rx="13" ry="16" fill="#7A4A3A" stroke="${FEATURE}" stroke-width="3"/>
+    `;
+  }
+  return head + ears + face;
+}
+
+/* Photo mode: true = real photos (needs internet), false = offline icons.
+   Saved between visits so a teacher only has to set it once. */
+let useRealPhotos = false;
+try{
+  const saved = localStorage.getItem('feelingsDetectivePhotoMode');
+  if(saved !== null) useRealPhotos = (saved === 'true');
+}catch(err){ /* localStorage unavailable (e.g. some file:// setups) — default to offline icons */ }
+function setPhotoMode(val){
+  useRealPhotos = val;
+  try{ localStorage.setItem('feelingsDetectivePhotoMode', val ? 'true' : 'false'); }catch(err){ /* ignore */ }
+  updatePhotoToggleUI();
+}
+
+
+const STORIES = [
+
+/* ============================================================
+   STORY 1 — "Maya's Big Day"
+   ============================================================ */
+{
+  id: "mayabigday",
+  emoji: "🧒",
+  title: "Maya's Big Day",
+  desc: "Find how Maya feels at each part of her day.",
+  questions: [
+    {
+      text: "Maya wakes up and sees the sun. She feels <b>happy</b>.",
+      prompt: "Tap the happy face.",
+      hotspots: [
+        { id:"happy",  correct:true,  cx:150, cy:150, emotion:"happy" },
+        { id:"sad",    correct:false, cx:330, cy:150, emotion:"sad" },
+        { id:"angry",  correct:false, cx:510, cy:150, emotion:"angry" }
+      ]
+    },
+    {
+      text: "Maya drops her ice cream on the ground. She feels <b>sad</b>.",
+      prompt: "Tap the sad face.",
+      hotspots: [
+        { id:"happy",     correct:false, cx:150, cy:150, emotion:"happy" },
+        { id:"sad",       correct:true,  cx:330, cy:150, emotion:"sad" },
+        { id:"surprised", correct:false, cx:510, cy:150, emotion:"surprised" }
+      ]
+    },
+    {
+      text: "A boy grabs Maya's toy without asking. She feels <b>angry</b>.",
+      prompt: "Tap the angry face.",
+      hotspots: [
+        { id:"calm",   correct:false, cx:150, cy:150, emotion:"calm" },
+        { id:"angry",  correct:true,  cx:330, cy:150, emotion:"angry" },
+        { id:"happy",  correct:false, cx:510, cy:150, emotion:"happy" }
+      ]
+    },
+    {
+      text: "The boy says sorry and gives the toy back. Maya feels <b>happy</b> again!",
+      prompt: "Tap the happy face.",
+      hotspots: [
+        { id:"angry",     correct:false, cx:150, cy:150, emotion:"angry" },
+        { id:"happy",     correct:true,  cx:330, cy:150, emotion:"happy" },
+        { id:"surprised", correct:false, cx:510, cy:150, emotion:"surprised" }
+      ]
+    }
+  ]
+},
+
+/* ============================================================
+   STORY 2 — "The Calm Down Corner"
+   ============================================================ */
+{
+  id: "calmdowncorner",
+  emoji: "🧸",
+  title: "The Calm Down Corner",
+  desc: "Find how Ben feels as he calms his body.",
+  questions: [
+    {
+      text: "Ben's tower of blocks falls down. He feels <b>angry</b>.",
+      prompt: "Tap the angry face.",
+      hotspots: [
+        { id:"angry",  correct:true,  cx:150, cy:150, emotion:"angry" },
+        { id:"calm",   correct:false, cx:330, cy:150, emotion:"calm" },
+        { id:"happy",  correct:false, cx:510, cy:150, emotion:"happy" }
+      ]
+    },
+    {
+      text: "Ben goes to his corner and takes slow, deep breaths. He feels <b>calm</b>.",
+      prompt: "Tap the calm face.",
+      hotspots: [
+        { id:"sad",       correct:false, cx:150, cy:150, emotion:"sad" },
+        { id:"calm",      correct:true,  cx:330, cy:150, emotion:"calm" },
+        { id:"surprised", correct:false, cx:510, cy:150, emotion:"surprised" }
+      ]
+    },
+    {
+      text: "Ben rebuilds his tower, even taller this time. He feels <b>happy</b>!",
+      prompt: "Tap the happy face.",
+      hotspots: [
+        { id:"angry", correct:false, cx:150, cy:150, emotion:"angry" },
+        { id:"happy", correct:true,  cx:330, cy:150, emotion:"happy" },
+        { id:"sad",   correct:false, cx:510, cy:150, emotion:"sad" }
+      ]
+    },
+    {
+      text: "Ben's friend cheers and gives him a high five. Ben feels <b>happy</b>!",
+      prompt: "Tap the happy face.",
+      hotspots: [
+        { id:"calm",      correct:false, cx:150, cy:150, emotion:"calm" },
+        { id:"happy",     correct:true,  cx:330, cy:150, emotion:"happy" },
+        { id:"surprised", correct:false, cx:510, cy:150, emotion:"surprised" }
+      ]
+    }
+  ]
+},
+
+/* ============================================================
+   STORY 3 — "A Trip to the Park"
+   ============================================================ */
+{
+  id: "triptopark",
+  emoji: "🌳",
+  title: "A Trip to the Park",
+  desc: "Find how Mia feels at the park.",
+  questions: [
+    {
+      text: "Mia swings high in the air at the park. She feels <b>happy</b>.",
+      prompt: "Tap the happy face.",
+      hotspots: [
+        { id:"sad",   correct:false, cx:150, cy:150, emotion:"sad" },
+        { id:"happy", correct:true,  cx:330, cy:150, emotion:"happy" },
+        { id:"angry", correct:false, cx:510, cy:150, emotion:"angry" }
+      ]
+    },
+    {
+      text: "Mia trips and falls off the slide. She feels <b>sad</b>.",
+      prompt: "Tap the sad face.",
+      hotspots: [
+        { id:"happy", correct:false, cx:150, cy:150, emotion:"happy" },
+        { id:"sad",   correct:true,  cx:330, cy:150, emotion:"sad" },
+        { id:"calm",  correct:false, cx:510, cy:150, emotion:"calm" }
+      ]
+    },
+    {
+      text: "A big dog suddenly barks nearby. Mia feels <b>surprised</b>!",
+      prompt: "Tap the surprised face.",
+      hotspots: [
+        { id:"calm",      correct:false, cx:150, cy:150, emotion:"calm" },
+        { id:"surprised", correct:true,  cx:330, cy:150, emotion:"surprised" },
+        { id:"sad",       correct:false, cx:510, cy:150, emotion:"sad" }
+      ]
+    },
+    {
+      text: "Mia sits on the bench and breathes slowly. She feels <b>calm</b> again.",
+      prompt: "Tap the calm face.",
+      hotspots: [
+        { id:"angry", correct:false, cx:150, cy:150, emotion:"angry" },
+        { id:"calm",  correct:true,  cx:330, cy:150, emotion:"calm" },
+        { id:"happy", correct:false, cx:510, cy:150, emotion:"happy" }
+      ]
+    }
+  ]
+},
+
+/* ============================================================
+   STORY 4 — "Sharing Time"
+   ============================================================ */
+{
+  id: "sharingtime",
+  emoji: "🧩",
+  title: "Sharing Time",
+  desc: "Find how Leo feels about sharing his toys.",
+  questions: [
+    {
+      text: "The teacher says it's time to share. Leo wants to keep playing. He feels <b>angry</b>.",
+      prompt: "Tap the angry face.",
+      hotspots: [
+        { id:"happy", correct:false, cx:150, cy:150, emotion:"happy" },
+        { id:"angry", correct:true,  cx:330, cy:150, emotion:"angry" },
+        { id:"calm",  correct:false, cx:510, cy:150, emotion:"calm" }
+      ]
+    },
+    {
+      text: "Leo takes a deep breath and counts to five. He feels <b>calm</b>.",
+      prompt: "Tap the calm face.",
+      hotspots: [
+        { id:"surprised", correct:false, cx:150, cy:150, emotion:"surprised" },
+        { id:"calm",      correct:true,  cx:330, cy:150, emotion:"calm" },
+        { id:"sad",       correct:false, cx:510, cy:150, emotion:"sad" }
+      ]
+    },
+    {
+      text: "Leo hands his friend a puzzle piece. He feels <b>happy</b>.",
+      prompt: "Tap the happy face.",
+      hotspots: [
+        { id:"angry", correct:false, cx:150, cy:150, emotion:"angry" },
+        { id:"happy", correct:true,  cx:330, cy:150, emotion:"happy" },
+        { id:"sad",   correct:false, cx:510, cy:150, emotion:"sad" }
+      ]
+    },
+    {
+      text: "His friend says \"Thank you!\" and hugs him. Leo feels <b>happy</b>!",
+      prompt: "Tap the happy face.",
+      hotspots: [
+        { id:"calm",  correct:false, cx:150, cy:150, emotion:"calm" },
+        { id:"happy", correct:true,  cx:330, cy:150, emotion:"happy" },
+        { id:"sad",   correct:false, cx:510, cy:150, emotion:"sad" }
+      ]
+    }
+  ]
+}
+
+];
+
+</script>
+<script>
+/* ============================================================
+   STORY DETECTIVE — app logic
+   ============================================================ */
+
+const screenHome = document.getElementById('screen-home');
+const screenStory = document.getElementById('screen-story');
+const screenComplete = document.getElementById('screen-complete');
+
+const storyListEl = document.getElementById('story-list');
+const photoToggleEl = document.getElementById('photo-toggle');
+const photoToggleIconEl = document.getElementById('photo-toggle-icon');
+const photoToggleLabelEl = document.getElementById('photo-toggle-label');
+const photoToggleSwitchEl = document.getElementById('photo-toggle-switch');
+const photoToggleHintEl = document.getElementById('photo-toggle-hint');
+const progressRowEl = document.getElementById('progress-row');
+const narrationTextEl = document.getElementById('narration-text');
+const questionCardEl = document.getElementById('question-card');
+const sceneWrapEl = document.getElementById('scene-wrap');
+const feedbackBannerEl = document.getElementById('feedback-banner');
+const btnListen = document.getElementById('btn-listen');
+const btnReplay = document.getElementById('btn-replay');
+const btnHome = document.getElementById('btn-home');
+
+const completeTitleEl = document.getElementById('complete-title');
+const starRowEl = document.getElementById('star-row');
+const summaryCardEl = document.getElementById('summary-card');
+const btnPlayAgain = document.getElementById('btn-play-again');
+const btnGoHome = document.getElementById('btn-go-home');
+
+let currentStory = null;
+let currentQIndex = 0;
+let correctSet = new Set(); // indices of questions answered correctly
+let attemptedWrongThisQ = false;
+let answeredThisQ = false;
+
+/* ---------------- HOME SCREEN ---------------- */
+function renderHome(){
+  storyListEl.innerHTML = '';
+  STORIES.forEach((story, i) => {
+    const card = document.createElement('button');
+    card.className = 'story-card';
+    card.style.animationDelay = (i * 0.12) + 's';
+    card.innerHTML = `
+      <div class="emoji">${story.emoji}</div>
+      <div>
+        <div class="title">${story.title}</div>
+        <div class="desc">${story.desc}</div>
+      </div>
+    `;
+    card.addEventListener('click', () => startStory(story));
+    storyListEl.appendChild(card);
+  });
+}
+
+function showScreen(el){
+  [screenHome, screenStory, screenComplete].forEach(s => s.classList.add('hidden'));
+  el.classList.remove('hidden');
+}
+
+/* ---------------- START / NAVIGATE STORY ---------------- */
+function startStory(story){
+  currentStory = story;
+  currentQIndex = 0;
+  correctSet = new Set();
+  showScreen(screenStory);
+  renderQuestion();
+}
+
+function renderProgressDots(){
+  progressRowEl.innerHTML = '';
+  currentStory.questions.forEach((_, i) => {
+    const dot = document.createElement('div');
+    dot.className = 'dot' + (i < currentQIndex ? ' done' : (i === currentQIndex ? ' current' : ''));
+    progressRowEl.appendChild(dot);
+  });
+}
+
+function renderQuestion(){
+  answeredThisQ = false;
+  attemptedWrongThisQ = false;
+  feedbackBannerEl.classList.add('hidden');
+  feedbackBannerEl.className = 'feedback-banner hidden';
+
+  renderProgressDots();
+
+  const q = currentStory.questions[currentQIndex];
+  narrationTextEl.innerHTML = q.text;
+  questionCardEl.textContent = q.prompt;
+
+  renderScene(q);
+
+  // Auto-read narration aloud
+  speak(stripHtml(q.text) + ' ' + q.prompt);
+}
+
+/* ---------------- BUILD SCENE (consistent layout, 3 big tappable choices) ---------------- */
+let sceneUid = 0;
+function shuffleArray(arr){
+  const a = arr.slice();
+  for(let i = a.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function renderScene(q){
+  const svgNS = "http://www.w3.org/2000/svg";
+  const width = 660, height = 360;
+  sceneUid++;
+
+  let svg = `<svg viewBox="0 0 ${width} ${height}" xmlns="${svgNS}">`;
+  // soft background
+  svg += `<rect x="0" y="0" width="${width}" height="${height}" fill="#FBF4E6"/>`;
+  // gentle ground line for visual grounding
+  svg += `<rect x="0" y="${height-40}" width="${width}" height="40" fill="#F0E6CC"/>`;
+
+  // Randomize which slot (left/middle/right) each hotspot lands in,
+  // so the correct answer isn't predictably in the same position.
+  const positions = [150, 330, 510];
+  const shuffled = shuffleArray(q.hotspots);
+
+  shuffled.forEach((hOrig, i) => {
+    const h = { ...hOrig, cx: positions[i], cy: 150 };
+    const r = 78;
+    const photoR = r - 12;
+    const word = WORD[h.emotion];
+    let visual;
+    if(useRealPhotos){
+      const clipId = `clip-${sceneUid}-${i}`;
+      const url = photoUrl(h.emotion);
+      visual = `
+        <clipPath id="${clipId}"><circle cx="${h.cx}" cy="${h.cy}" r="${photoR}"/></clipPath>
+        <circle cx="${h.cx}" cy="${h.cy}" r="${r}" fill="#4F8FE8" opacity="0.18"/>
+        <circle cx="${h.cx}" cy="${h.cy}" r="${photoR+2}" fill="#FFFFFF" stroke="#4F8FE8" stroke-width="5"/>
+        <image href="${url}" x="${h.cx - photoR}" y="${h.cy - photoR}" width="${photoR*2}" height="${photoR*2}"
+               clip-path="url(#${clipId})" preserveAspectRatio="xMidYMid slice"/>
+      `;
+    } else {
+      const color = FACE_COLOR[h.emotion];
+      visual = `
+        <circle cx="${h.cx}" cy="${h.cy}" r="${r}" fill="${color}" opacity="0.18"/>
+        <circle cx="${h.cx}" cy="${h.cy}" r="${photoR+2}" fill="#FFFFFF" stroke="${color}" stroke-width="5"/>
+        <g transform="translate(${h.cx},${h.cy}) scale(${photoR/66})">${illustratedFace(h.emotion)}</g>
+      `;
+    }
+    svg += `
+      <g class="hotspot" data-hot="${h.id}" data-correct="${h.correct}" tabindex="0" role="button" aria-label="${word}">
+        ${visual}
+        <text x="${h.cx}" y="${h.cy + r + 26}" font-size="22" text-anchor="middle" font-weight="bold" fill="#3A3A3A">${word}</text>
+      </g>
+    `;
+  });
+
+
+  svg += `</svg>`;
+  sceneWrapEl.innerHTML = svg;
+
+  // attach listeners
+  sceneWrapEl.querySelectorAll('.hotspot').forEach(g => {
+    g.addEventListener('click', onHotspotClick);
+    g.addEventListener('keydown', (e) => {
+      if(e.key === 'Enter' || e.key === ' '){ onHotspotClick({currentTarget:g}); }
+    });
+  });
+}
+
+function onHotspotClick(e){
+  if(answeredThisQ) return; // lock after correct answer found
+  const g = e.currentTarget;
+  const isCorrect = g.getAttribute('data-correct') === 'true';
+
+  if(isCorrect){
+    answeredThisQ = true;
+    g.classList.add('correct-flash');
+    showFeedback(true);
+    correctSet.add(currentQIndex);
+    popSparkle(g);
+    playCorrectSound();
+    // Auto-advance after a short pause so the student sees/hears the feedback
+    setTimeout(goToNextQuestion, 1400);
+  } else {
+    g.classList.add('wrong-flash');
+    setTimeout(()=>g.classList.remove('wrong-flash'), 500);
+    attemptedWrongThisQ = true;
+    showFeedback(false);
+    playIncorrectSound();
+  }
+}
+
+function goToNextQuestion(){
+  currentQIndex++;
+  if(currentQIndex >= currentStory.questions.length){
+    finishStory();
+  } else {
+    renderQuestion();
+  }
+}
+
+function showFeedback(correct){
+  feedbackBannerEl.classList.remove('hidden');
+  if(correct){
+    feedbackBannerEl.className = 'feedback-banner correct';
+    feedbackBannerEl.textContent = pickPraise();
+  } else {
+    feedbackBannerEl.className = 'feedback-banner try';
+    feedbackBannerEl.textContent = "Try again!";
+  }
+}
+
+function pickPraise(){
+  const options = ["Great find! ⭐", "Yes! That's it! 🎉", "Nice job! 👏", "You found it! 🌟"];
+  return options[Math.floor(Math.random()*options.length)];
+}
+
+/* ---------------- SPARKLE POP ---------------- */
+function popSparkle(targetEl){
+  const pop = document.createElement('div');
+  pop.className = 'sparkle-pop';
+  pop.textContent = '✨';
+  document.body.appendChild(pop);
+  setTimeout(()=>pop.remove(), 900);
+}
+
+/* ---------------- FINISH STORY ---------------- */
+function finishStory(){
+  showScreen(screenComplete);
+  const total = currentStory.questions.length;
+  completeTitleEl.textContent = `Great Job!`;
+  const starCount = correctSet.size === total ? 3 : (correctSet.size >= Math.ceil(total/2) ? 2 : 1);
+
+  // Build stars with staggered pop-in animation
+  starRowEl.innerHTML = '';
+  for(let i=0;i<3;i++){
+    const span = document.createElement('span');
+    span.textContent = i < starCount ? '⭐' : '☆';
+    span.style.animationDelay = (0.15 + i*0.18) + 's';
+    starRowEl.appendChild(span);
+  }
+
+  summaryCardEl.innerHTML = `You found <b>${correctSet.size} of ${total}</b> story details in<br><b>${currentStory.title}</b> ${currentStory.emoji}`;
+
+  launchConfetti();
+  playFanfareSound();
+  speak(`Great job! You finished ${currentStory.title}.`);
+}
+
+/* Falling confetti burst across the screen */
+function launchConfetti(){
+  const pieces = ['🎉','✨','🎊','⭐','🌟'];
+  const count = 22;
+  for(let i=0;i<count;i++){
+    const el = document.createElement('div');
+    el.className = 'confetti-piece';
+    el.textContent = pieces[Math.floor(Math.random()*pieces.length)];
+    el.style.left = Math.random()*100 + 'vw';
+    const duration = 1.8 + Math.random()*1.4;
+    const delay = Math.random()*0.6;
+    el.style.animationDuration = duration + 's';
+    el.style.animationDelay = delay + 's';
+    document.body.appendChild(el);
+    setTimeout(()=>el.remove(), (duration+delay)*1000 + 200);
+  }
+}
+
+btnPlayAgain.addEventListener('click', () => startStory(currentStory));
+btnGoHome.addEventListener('click', () => { showScreen(screenHome); });
+btnHome.addEventListener('click', () => { showScreen(screenHome); });
+
+/* ---------------- PHOTO / OFFLINE-ICON TOGGLE ---------------- */
+function updatePhotoToggleUI(){
+  if(useRealPhotos){
+    photoToggleSwitchEl.classList.add('on');
+    photoToggleIconEl.textContent = '📷';
+    photoToggleLabelEl.textContent = 'Real photos';
+    photoToggleHintEl.textContent = 'Using real photos — needs internet to load.';
+  } else {
+    photoToggleSwitchEl.classList.remove('on');
+    photoToggleIconEl.textContent = '🎨';
+    photoToggleLabelEl.textContent = 'Illustrated faces';
+    photoToggleHintEl.textContent = 'Using illustrated faces — works offline, no internet needed.';
+  }
+}
+photoToggleEl.addEventListener('click', () => setPhotoMode(!useRealPhotos));
+
+/* ---------------- LISTEN / REPLAY ---------------- */
+function currentNarrationFull(){
+  const q = currentStory.questions[currentQIndex];
+  return stripHtml(q.text) + ' ' + q.prompt;
+}
+btnListen.addEventListener('click', () => speak(currentNarrationFull()));
+btnReplay.addEventListener('click', () => speak(currentNarrationFull()));
+
+/* ---------------- SOUND EFFECTS (Web Audio, no external files) ---------------- */
+let audioCtx = null;
+function getAudioCtx(){
+  if(!audioCtx){
+    try{ audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+    catch(err){ return null; }
+  }
+  if(audioCtx.state === 'suspended'){ audioCtx.resume(); }
+  return audioCtx;
+}
+
+function playTone(freq, startTime, duration, ctx, type='sine', peakGain=0.25){
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = type;
+  osc.frequency.setValueAtTime(freq, startTime);
+  gain.gain.setValueAtTime(0, startTime);
+  gain.gain.linearRampToValueAtTime(peakGain, startTime + 0.02);
+  gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.start(startTime);
+  osc.stop(startTime + duration);
+}
+
+/* Cheerful little ascending major-chord chime for a correct answer */
+function playCorrectSound(){
+  const ctx = getAudioCtx();
+  if(!ctx) return;
+  const now = ctx.currentTime;
+  const notes = [523.25, 659.25, 784.0]; // C5, E5, G5
+  notes.forEach((freq, i) => {
+    playTone(freq, now + i * 0.09, 0.35, ctx, 'sine', 0.22);
+  });
+}
+
+/* Clear but gentle descending "blip-blip" for an incorrect answer.
+   Distinct enough from the correct chime to be unmistakable,
+   but still soft (no harsh buzzer/error tone). */
+function playIncorrectSound(){
+  const ctx = getAudioCtx();
+  if(!ctx) return;
+  const now = ctx.currentTime;
+  playTone(392, now, 0.22, ctx, 'triangle', 0.20);
+  playTone(294, now + 0.18, 0.28, ctx, 'triangle', 0.20);
+}
+
+/* Triumphant little fanfare for finishing a whole story */
+function playFanfareSound(){
+  const ctx = getAudioCtx();
+  if(!ctx) return;
+  const now = ctx.currentTime;
+  const melody = [523.25, 523.25, 659.25, 784.0, 1046.5]; // C5 C5 E5 G5 C6
+  const timings = [0, 0.16, 0.32, 0.48, 0.66];
+  melody.forEach((freq, i) => {
+    playTone(freq, now + timings[i], 0.4, ctx, 'triangle', 0.24);
+  });
+}
+
+/* ---------------- SPEECH SYNTH ---------------- */
+function speak(text){
+  try{
+    if(!('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel();
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.rate = 0.92;
+    utter.pitch = 1.05;
+    window.speechSynthesis.speak(utter);
+  }catch(err){ /* fail silently */ }
+}
+
+function stripHtml(html){
+  const tmp = document.createElement('div');
+  tmp.innerHTML = html;
+  return tmp.textContent || tmp.innerText || '';
+}
+
+/* ---------------- INIT ---------------- */
+renderHome();
+updatePhotoToggleUI();
+showScreen(screenHome);
+
+// iOS/iPadOS requires AudioContext + SpeechSynthesis to be touched
+// inside a real user-gesture before they'll produce sound. This
+// primes both on the very first tap anywhere in the app.
+function unlockAudioOnce(){
+  const ctx = getAudioCtx();
+  if(ctx && ctx.state === 'suspended'){ ctx.resume(); }
+  try{
+    if('speechSynthesis' in window){
+      // a near-silent warm-up utterance unlocks speech on iOS
+      const warm = new SpeechSynthesisUtterance(' ');
+      warm.volume = 0;
+      window.speechSynthesis.speak(warm);
+    }
+  }catch(err){ /* ignore */ }
+  document.removeEventListener('touchend', unlockAudioOnce);
+  document.removeEventListener('click', unlockAudioOnce);
+}
+document.addEventListener('touchend', unlockAudioOnce, { once:true, passive:true });
+document.addEventListener('click', unlockAudioOnce, { once:true });
+
+</script>
+</body>
+</html>
